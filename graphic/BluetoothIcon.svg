@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   id="SVGRoot"
+   version="1.1"
+   viewBox="0 0 250 250"
+   height="250"
+   width="250"
+   sodipodi:docname="BluetoothIcon.svg"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   inkscape:export-filename="C:\Users\OndrejSpetko\Documents\GitHub\TestPulse\graphic\BluetoothIcon.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96">
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     id="namedview13"
+     showgrid="false"
+     inkscape:zoom="1.3350176"
+     inkscape:cx="-232.04527"
+     inkscape:cy="85.237592"
+     inkscape:window-x="1432"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="SVGRoot">
+    <inkscape:grid
+       type="xygrid"
+       id="grid824" />
+  </sodipodi:namedview>
+  <defs
+     id="defs3745" />
+  <metadata
+     id="metadata3748">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <ellipse
+     style="fill:none;fill-opacity:1;stroke:#fff7ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     id="path820"
+     cx="125.00001"
+     cy="125"
+     rx="121.87368"
+     ry="121.87367"
+     inkscape:export-filename="C:\Users\ondra\Desktop\RollIcon.png"
+     inkscape:export-xdpi="96"
+     inkscape:export-ydpi="96" />
+  <image
+     y="42.708752"
+     x="42.892719"
+     id="image31"
+     xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAAABHNCSVQICAgIfAhkiAAAAAlwSFlz AAAF7wAABe8BgGK9nAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAQmSURB VHic7ZxdixRHFIbFX+JFXFdjomgEkSAiIqwGxJBAEoIQ0MQIKoIQ1ICDuchGjf5Eb6L5QGPE1f32 ycXU4rju7tSpqq63e/o811Vnznmfnt7p3p7Ztq1jAD+pe+g1DJlV99FbeItLUMC7uITa8D6/qXvq FRsIcAk12USAS6jFFgJcQg3GCAC4q+5xookQ4BKaJFKAS2gKgwCAe+p+Jw6jAJdQmgQBLqEkiQJc QikyBADcV/ffeTIFuIRcCghwCTkUEgDwu3qWTlJQgEtIISLUO0YJd9QzdYpxaYY1PwKrBgn9eCcA V8l8qiFGQFh30Sjhl/wJWwzwA/AmDDvIqBMlIKw9AywYJDzIHrSNAF9tcDQOEmtFCwjrZ4DXvZUA nAaWNhl2kFDPJCDsOQq8MEh4mD14GwiDjzv6BsaaZgFh3yfA095IAA4Qf9QNDHWTBIS9HwKPeyEh CPjXMGzUp6McAWH/XmDO0NeN/DREANPAn4ZhBxE1cwU8MPTzGPigSBgqSkvIEQDcMvTxBJgqGoaK khJSBQDXDa//FzDdSBgqSklIEQB8z9uLwHE8BfY1GoaKEhKsAoBviL8l8QzYXyUMFbkSLAKAL4GV yNd5ARyuGoaKHAmxAhjegliMrP8SOCIJQ0WqhBgBDK/AX0XWnQM+lYahIkVCxJpDxF+BzwMn1DlI wX7FPI6/I9ctAWfV87cC7O+EXBaAGfXcraKihGXgc/W8raSChGXgC/WcraZBCavAOfV8naABCavA d+q5OkVBCW+A8+p5OkkhCVfUc3SaTAnX1P1PBIkSflb3HcN2dQMNsqBuYCIAPgL+STwF3VT332ky w1/Df2ErhULhw/Bj6GX1PJ2iYPijEi6p5+oEDYQ/KuGier5W02D4oxIuqOdsJRXCX2MF+FY9b6uo GP6ohK/Vc7cCbFe5Je+QLgKn1PNLSQh/d8S6WYOEeeCkOgcJ2E47j4AdYd+WhDUxT0+ssQh8Jg2j Nqnhh71jBYR1Vgn9OB3lhB/2RwkIay0SXgPHq4ZRm9zwQ41oAWG9RcIr4FiNLKpTIvxQxyQg7LFI mAOONhpGbUj4tLNFLbOAsM/y6WhyHlOn0JE/Ui9JQNhreSf8BxwqGkZtSocfaiYLCPstEp4DB4uE URsKnnbW1c0VsJv4R9ehq19TZfjU87OS4Ye6yQJC+JbbGb/mJyGE4bvgyRYDPiLitLOuZpIA4GNs N/wm41+ZwC42/nkAc/ihnlkAcJAGvrXfGYAp4I/c8EMtk4Deh78GsDNISA4/1IkW4OGvA9iD4Q/u JjWiBNC3P7i1iBGAH/nNERGmh98kEYH6aadJDOGOw4/8FDx8MR6+GA9fjIcvxsMX4+GL8fDFePhi PHwxHr4YD1+Mhy/Gwxfj4Yvx8MV4+GI8fDHAbXUPJfkfq3sGvCvrI0wAAAAASUVORK5CYII= "
+     preserveAspectRatio="none"
+     height="162.90042"
+     width="162.90042" />
+</svg>
