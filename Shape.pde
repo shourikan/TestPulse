@@ -1,28 +1,37 @@
 void Triangle(PVector pos, float size, String orientation){
+  println(orientation);
   switch(orientation){
     case "lefttop":{
-      triangle(pos.x-size, pos.y-size, pos.x+size+size/3, pos.y+size-size/3, pos.x+size-size/3, pos.y+size+size/3);
+      triangle(pos.x-size/2, pos.y-size/2, pos.x+size/2+size/4, pos.y-size/4, pos.x-size/4, pos.y+size/2+size/4);
+      break;
     }
     case "leftbot":{
-      triangle(x1, y1, x2, y2, x3, y3);
+      triangle(pos.x-size/2, pos.y+size/2, pos.x+size/2+size/4, pos.y+size/4, pos.x-size/4, pos.y-size/2-size/4);
+      break;
     }
     case "left":{
-      triangle(x1, y1, x2, y2, x3, y3);
+      triangle(pos.x-size/2, pos.y, pos.x+size/2, pos.y-size/2, pos.x+size/2, pos.y+size/2);
+      break;
     }
     case "righttop":{
-      triangle(pos.x+size, pos.y-size, pos.x-size-size/3, pos.y+size-size/3, pos.x-size+size/3, pos.y+size+size/3);
+      triangle(pos.x+size/2, pos.y-size/2, pos.x-size/2-size/4, pos.y-size/4, pos.x+size/4, pos.y+size/2+size/4);
+      break;
     }
     case "rightbot":{
-      triangle(x1, y1, x2, y2, x3, y3);
+      triangle(pos.x+size/2, pos.y-size/2, pos.x-size/2-size/4, pos.y+size/4, pos.x+size/4, pos.y-size/2-size/4);
+      break;
     }
     case "right":{
-      triangle(x1, y1, x2, y2, x3, y3);
+      triangle(pos.x+size/2, pos.y, pos.x-size/2, pos.y-size/2, pos.x-size/2, pos.y+size/2);
+      break;
     }
     case "top":{
-      triangle(pos.x, pos.y-size, pos.x+size/3, pos.y+size-size/3, pos.x+size-size/3, pos.y+size+size/3);
+      triangle(pos.x, pos.y-size/2, pos.x-size/2, pos.y+size/2, pos.x+size/2, pos.y+size/2);
+      break;
     }
     case "bot":{
-      triangle(x1, y1, x2, y2, x3, y3);
-    }
+      triangle(pos.x, pos.y+size/2, pos.x-size/2, pos.y-size/2, pos.x+size/2, pos.y-size/2);
+      break;  
+  }
   }
 }

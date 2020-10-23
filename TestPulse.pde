@@ -103,9 +103,9 @@ float slowingMult = 0.8;
 
 void setup() {
 
-  size(1080,1920);
+  //size(1080,1920);
   orientation(PORTRAIT);
-  //fullScreen();
+  fullScreen();
   frameRate(fps);
   background(bgColor);
   smooth();
@@ -401,7 +401,7 @@ void draw() {
       }
       //right
       else{
-        Triangle(new PVector(width-playerSize, y_), playerSize, "lefttop");
+        Triangle(new PVector(width-playerSize, y_), playerSize, "right");
       }
     }
     else{
@@ -430,7 +430,7 @@ void draw() {
     textSize(scaleFactor/7);
     fill(collectColor);
     text(round(score), mid.x, height-scaleFactor/7);
-    //text(frameRate, mid.x, height-scaleFactor/7);
+    text(frameRate, mid.x, height-scaleFactor/7);
     
     //Info text
     /*textAlign(LEFT, TOP);
