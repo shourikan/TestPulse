@@ -1,7 +1,7 @@
 
-// Game
+//Game
 import java.util.*;
-// import cassette.audiofiles.SoundFile;
+//import cassette.audiofiles.SoundFile;
 import ketai.data.*;
 import android.content.Context;
 import android.hardware.Sensor;
@@ -10,20 +10,20 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.view.WindowManager;
 
-//  Bluetooth
+//Bluetooth
 import android.os.Bundle;
 import android.content.Intent;    
 import ketai.net.bluetooth.*;
-import ketai.ui.*; 
+import ketai.ui.*;
 import ketai.net.*;
 import oscP5.*;
 
-// Sensors
+//Sensors
 SensorManager manager;
 Sensor sensor;
 AccelerometerListener listener;
 
-// Bluetooth
+//Bluetooth
 KetaiBluetooth bt;
 KetaiList connectionList;
 PVector multiplayerPos  = new PVector();
@@ -34,9 +34,9 @@ boolean triggerPlay = false;
 boolean ready = false;
 boolean winner = true;
 
-// Game
+//Game
 Context context;
-// SoundFile collectSound, shieldSound, overSound, bgSound, slowSound, recordSound;
+//SoundFile collectSound, shieldSound, overSound, bgSound, slowSound, recordSound;
 KetaiSQLite db;
 boolean b = false;
 boolean slowing = false;
@@ -59,8 +59,6 @@ float tilt = 0;
 float tiltDecay = 0.95;
 PVector mid;
 PVector dir;
-// PShape playerCharacter;
-// PShape player2Character;
 
 color collectColor = color(255, 177, 54);
 color obstacleColor = color(173, 73, 254);
@@ -92,7 +90,7 @@ float collectSpeedMult = 0.8;
 float shieldSpeedMult = 0.6;
 int fps = 60;
 float scaleFactor;
-PVector screenFactor;
+float screenFactor;
 float score = 0;
 float scoreTimeFactor = 10;
 float scoreSpeedFactor = 0.1;
@@ -109,32 +107,32 @@ float keyMult = 0.3;
 float best;
 float slowingMult = 0.8;
 float lastFrame = 0;
-float dT = 1;
+float dT = 0;
 
 void setup() {
 	
-	// size(1080,1920);
+	//size(1080,1920);
 	orientation(PORTRAIT);
 	fullScreen(P2D);
-	//frameRate(fps);
+	frameRate(fps);
 	background(bgColor);
-	smooth();
+	//smooth();
 	noStroke();
 	fill(255);
-	// randomSeed(int(random(100)));
-	// randomSeed(1);
-	// Bluetooth
+	//randomSeed(int(random(100)));
+	//randomSeed(1);
+	//Bluetooth
 	bt.start();
 	
-	// DB
+	//DB
 	DBInit();
 	best = GetBest();
-	// SetBest(0);
+	//SetBest(0);
 	CreateUser("record");
-	// println(GetBest());
+	//println(GetBest());
 	
-	// Sounds
-	// overSound = new SoundFile(this, "Over.mp3");
+	//Sounds
+	//overSound = new SoundFile(this, "Over.mp3");
 	/*recordSound = new SoundFile(this, "Record.wav");
 	slowSound = new SoundFile(this, "Slow.wav");*/
 	
@@ -146,14 +144,11 @@ void setup() {
 	LeftIcon = loadImage("LeftIcon.png");
 	HomeIcon = loadImage("HomeIcon.png");
 	ClearIcon = loadImage("ClearIcon.png");
-	// player2Character = loadShape("Player2.svg");
-	// playerCharacter = loadShape("Player.svg");
 	
 	//println(width+" "+height);
 	//scaleFactor = min(width, height);
 	scaleFactor = 1080;
-	screenFactor = new PVector(float(width) / 1080, float(height) / 1920);
-	//println("SF : " + screenFactor);
+	screenFactor = width / 1080;
 	
 	lastFrame = millis();
 	
@@ -171,14 +166,7 @@ void setup() {
 	
 	//Player
 	playerCenter = mid;
-	playerSize = scaleFactor / 20 * ((screenFactor.x + screenFactor.y) / 2);
-	// playerCharacter.scale(playerSize / svgSize);
-	// player2Character.scale(playerSize / svgSize);
-	
-	//Multiplayer
-	multiplayerPos = new PVector(width / 2, height / 2);
-	
-	shapeMode(CENTER);
+	playerSize = scaleFactor / 20 * screenFactor;
 	
 	//Effects
 	shieldGlow = playerSize;
@@ -191,9 +179,7 @@ void setup() {
 void draw() {
 	
 	float time = millis();
-	dT = (time - lastFrame) / (1000.0 / 60.0);
-	//dT = (1 - abs(dT) > 0.5) ? dT : 1.0;
-	dT = 1.0;
+	dT = (1000 / 60) / (time - lastFrame);
 	lastFrame = time;
 	
 	if (startMenu) {
@@ -312,8 +298,13 @@ void draw() {
 		background(bestColor);*/
 		background(bgColor);
 		
+		//Low FPS compensation
+		// float rate = fps / frameRate;
+		// rate *= (rate>1.05) ? 1.2 : 1;
+		float rate = 1.0;
+		
 		//Score
-		score += ((1.0 / 60.0) * scoreTimeFactor * (1 + ((speed - startSpeed) * scoreSpeedFactor))) * dT;
+		score += ((1.0 / 60.0) * scoreTimeFactor * (1 + ((speed - startSpeed) * scoreSpeedFactor))) * rate;
 		if (score > best && !b) {
 			RecordAnimation();
 			b = true;
@@ -344,10 +335,12 @@ void draw() {
 		//Direction, Movement step
 		float dirX = (RollOrRotate) ? radians(tilt * (1) + 90) : radians(tilt * (- 1) + 90);
 		dir = new PVector(cos(dirX), sin(dirX));
-		PVector mov = new PVector(dir.x * speed * dT * screenFactor.x, dir.y * speed * dT * screenFactor.y);
-		realPos.add(new PVector(mov.x * (- 1),(dir.y - 1) * - 1 * speed * dT * screenFactor.y));
-		relativePos.add(new PVector(mov.x,(dir.y - 1) * speed * dT * screenFactor.y));
+		PVector mov = new PVector(dir.x * speed * rate, dir.y * speed * rate);
+		realPos.add(new PVector(mov.x * (- 1),(dir.y - 1) *- 1 * speed * rate));
+		relativePos.add(new PVector(mov.x,(dir.y - 1) * speed * rate));
 		//realPos.add(new PVector(mov.x*(-1), 0));
+		
+		sendData();
 		
 		//Collects
 		for (Collect obj : collects) {
@@ -373,9 +366,6 @@ void draw() {
 			if (particles.get(i).life <= 0)
 				particles.remove(i);
 		}
-		
-		if (bt.getConnectedDeviceNames().size() > 0 && game)
-			sendData();
 		
 		//Shield
 		fill(shieldColor);
@@ -443,41 +433,39 @@ void draw() {
 				fill(multiplayerColor);
 				noStroke();
 				ellipse(multiplayerPos.x + relativePos.x, multiplayerPos.y + relativePos.y, playerSize, playerSize);
-				// shape(player2Character, multiplayerPos.x + relativePos.x, multiplayerPos.y + relativePos.y);
 			}
 		}
 		
-		// Player character
+		//Player character
 		fill(playerColor);
 		noStroke();
 		ellipse(mid.x, mid.y, playerSize, playerSize);
-		// shape(playerCharacter, mid.x, mid.y);
 		
-		// Score
+		//Score
 		textAlign(CENTER, CENTER);
 		textSize(scaleFactor / 7);
 		fill(collectColor);
 		text(round(score), mid.x, height - scaleFactor / 7);
-		// text(frameRate, mid.x, height - scaleFactor / 7);
+		//text(frameRate, mid.x, height - scaleFactor / 7);
 		
 		//Info text
 		textAlign(LEFT, TOP);
 		textSize(scaleFactor / 20);
 		fill(255);
-		text(round(frameRate), 10, 50);
-		text("dT : " + dT, 10, 100);
-		text("SF" + screenFactor, 10, 150);
-		// text(System.nanoTime(), 10, 150);
-		// text(width + " " + height, 10, 200);
+		//text(round(frameRate), 10, scaleFactor / 9);
+		//text(rate + " : " + fps / frameRate, 10, 0);
+		text("dT : " + dT, 10, scaleFactor / 9);
+		text(screenFactor + " " + System.nanoTime(), 10, scaleFactor / 6);
+		text(System.nanoTime(), 10, scaleFactor / 4);
 		
 		//Speed bar
 		float yP = width * ((speed - startSpeed) / (speedLimit - startSpeed));
 		stroke(255);
 		strokeWeight(1);
 		line(0, height - 3, yP, height - 3);
-		// strokeWeight(1);
-		// fill(interfaceColor);
-		// ellipse(scaleFactor/200, yP, scaleFactor/50, scaleFactor/50);
+		/*strokeWeight(1);
+		fill(interfaceColor);
+		ellipse(scaleFactor/200, yP, scaleFactor/50, scaleFactor/50);*/
 		
 		//Score bar
 		if (score <= best) {
@@ -485,9 +473,9 @@ void draw() {
 			stroke(collectColor);
 			strokeWeight(1);
 			line(0, height - 1, yP, height - 1);
-			// strokeWeight(1);
-			// fill(interfaceColor);
-			// ellipse(yP, height-scaleFactor/200, scaleFactor/50, scaleFactor/50);
+			/*strokeWeight(1);
+			fill(interfaceColor);
+			ellipse(yP, height-scaleFactor/200, scaleFactor/50, scaleFactor/50);*/
 		}
 	}
 }

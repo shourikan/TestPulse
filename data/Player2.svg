@@ -8,12 +8,12 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    inkscape:version="1.0 (4035a4fb49, 2020-05-01)"
-   sodipodi:docname="Collect.svg"
+   sodipodi:docname="Player.svg"
    id="SVGRoot"
    version="1.1"
-   viewBox="0 0 15 15"
-   height="15"
-   width="15">
+   viewBox="0 0 30 30"
+   height="30"
+   width="30">
   <sodipodi:namedview
      inkscape:document-rotation="0"
      inkscape:snap-grids="false"
@@ -26,7 +26,7 @@
      showgrid="true"
      inkscape:current-layer="layer1"
      inkscape:document-units="px"
-     inkscape:cy="15"
+     inkscape:cy="5.625"
      inkscape:cx="15"
      inkscape:zoom="8.5333333"
      inkscape:pageshadow="2"
@@ -54,15 +54,14 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(0,-15)"
      inkscape:label="Vrstva 1"
      inkscape:groupmode="layer"
      id="layer1">
     <circle
-       r="7.5"
-       cy="22.5"
-       cx="7.5"
+       r="15"
+       cy="15"
+       cx="15"
        id="path4706"
-       style="fill:rgb(255, 177, 54);fill-opacity:1;stroke-width:0.5" />
+       style="fill:rgb(255, 255, 255);fill-opacity:1;stroke-width:1" />
   </g>
 </svg>
