@@ -449,7 +449,7 @@ namespace Pulse
             ShowState();
         }
 
-        public async void ShowResults(long score, bool newLeaderboardBest)
+        public async void ShowResults(long score)
         {
             int run = ++runRankRequest;
             firstPlaceTime = FirstPlaceDuration;
@@ -461,42 +461,32 @@ namespace Pulse
                 return;
 
             SetRunRank("Checking run rank…", PulsePalette.Muted);
-            // A leaderboard read already in flight may predate this score submission.
-            var request = game.Online.GetLeaderboardAsync(fresh: true);
+            var request = game.Online.GetRunRankAsync(score);
             var finished = await Task.WhenAny(request, Task.Delay(LeaderboardTimeoutMs));
             if (this == null || run != runRankRequest || game.Model.State != RunState.Ended) return;
 
-            var entries = finished == request ? await request : null;
-            if (entries == null || (newLeaderboardBest && game.Online.ScorePending))
+            var rank = finished == request ? await request : null;
+            if (!rank.HasValue)
             {
                 SetRunRank("Leaderboard unavailable", PulsePalette.Muted);
                 return;
             }
 
-            ShowRunRank(entries, score, newLeaderboardBest);
+            ShowRunRank(rank.Value);
         }
 
-        void ShowRunRank(PulseLeaderboardEntry[] entries, long score, bool newLeaderboardBest)
+        void ShowRunRank(int rank)
         {
-            int projectedRank = 1;
-            for (int i = 0; i < entries.Length; i++)
+            if (rank > PulseOnline.LeaderboardSize)
             {
-                var entry = entries[i];
-                if (entry.IsYou && entry.Score == score)
-                {
-                    bool firstPlace = i == 0;
-                    SetRunRank($"Leaderboard #{i + 1}", firstPlace ? PulsePalette.Gold : PulsePalette.Mint);
-                    if (firstPlace && newLeaderboardBest && !PulseSettings.ReducedMotion)
-                        firstPlaceTime = 0;
-                    return;
-                }
-                if (entry.Score >= score) projectedRank++;
+                SetRunRank($"Outside the top {PulseOnline.LeaderboardSize}", PulsePalette.Muted);
+                return;
             }
 
-            // A run that isn't posted is compared to the board, after any published ties.
-            SetRunRank(projectedRank <= PulseOnline.LeaderboardSize
-                ? $"Run would rank #{projectedRank}"
-                : $"Outside the top {PulseOnline.LeaderboardSize}", PulsePalette.Muted);
+            bool firstPlace = rank == 1;
+            SetRunRank($"Run rank #{rank}", firstPlace ? PulsePalette.Gold : PulsePalette.Mint);
+            if (firstPlace && !PulseSettings.ReducedMotion)
+                firstPlaceTime = 0;
         }
 
         void SetRunRank(string text, Color color)

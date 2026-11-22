@@ -111,10 +111,10 @@ namespace Pulse
 #endif
         }
 
-        public Task<PulseLeaderboardEntry[]> GetLeaderboardAsync(bool fresh = false)
+        public Task<PulseLeaderboardEntry[]> GetLeaderboardAsync()
         {
 #if PULSE_LEADERBOARD
-            if (fresh || leaderboardRequest == null || leaderboardRequest.IsCompleted)
+            if (leaderboardRequest == null || leaderboardRequest.IsCompleted)
                 leaderboardRequest = FetchLeaderboardAsync();
             return leaderboardRequest;
 #else
@@ -123,6 +123,37 @@ namespace Pulse
         }
 
 #if PULSE_LEADERBOARD
+        static Query LeaderboardScores() => FirebaseFirestore.DefaultInstance.Collection(Collection)
+            .OrderByDescending(ScoreField).OrderByDescending(FieldPath.DocumentId);
+
+        public async Task<int?> GetRunRankAsync(long score)
+        {
+            if (!LeaderboardAvailable) return null;
+            try
+            {
+                await InitializeAsync();
+                var playerId = await GetPlayerIdAsync();
+                var aheadOfRun = LeaderboardScores().EndBefore(score, playerId);
+                var scores = await aheadOfRun.Limit(LeaderboardSize).GetSnapshotAsync(Source.Server);
+                foreach (var entry in scores.Documents)
+                {
+                    if (entry.Id != playerId) continue;
+                    if (scores.Count < LeaderboardSize) return scores.Count;
+
+                    // The player's previous best took one of the ten slots in this query.
+                    var next = await aheadOfRun.StartAfter(scores[scores.Count - 1]).Limit(1)
+                        .GetSnapshotAsync(Source.Server);
+                    return scores.Count + next.Count;
+                }
+                return scores.Count + 1;
+            }
+            catch (Exception error)
+            {
+                Debug.LogWarning("[Pulse] Could not load run rank: " + error.Message);
+                return null;
+            }
+        }
+
         async Task<string> GetPlayerIdAsync()
         {
             var auth = FirebaseAuth.DefaultInstance;
@@ -175,8 +206,7 @@ namespace Pulse
                 await InitializeAsync();
                 var playerId = await GetPlayerIdAsync();
                 await SyncScoreAsync();
-                var scores = await FirebaseFirestore.DefaultInstance.Collection(Collection)
-                    .OrderByDescending(ScoreField).Limit(LeaderboardSize).GetSnapshotAsync(Source.Server);
+                var scores = await LeaderboardScores().Limit(LeaderboardSize).GetSnapshotAsync(Source.Server);
                 var entries = new List<PulseLeaderboardEntry>(scores.Count);
                 foreach (var score in scores.Documents)
                 {
@@ -192,6 +222,8 @@ namespace Pulse
                 return null;
             }
         }
+#else
+        public Task<int?> GetRunRankAsync(long score) => Task.FromResult<int?>(null);
 #endif
 
         public void RunStarted(SteeringMode steering)
