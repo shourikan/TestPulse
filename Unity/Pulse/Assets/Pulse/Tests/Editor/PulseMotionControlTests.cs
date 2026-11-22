@@ -11,6 +11,54 @@ namespace Pulse.Tests
             return new Vector3(Mathf.Sin(angle), -Mathf.Cos(angle), 0);
         }
 
+        [TestCase(0, 0, 0)]
+        [TestCase(90, 0, 0)]
+        [TestCase(180, 0, 0)]
+        [TestCase(0, 0, 90)]
+        [TestCase(37, 123, -56)]
+        public void TiltSteersTheSameInBothDirectionsFromAnyStartingPose(float x, float y, float z)
+        {
+            var control = new PulseMotionControl();
+            Quaternion rest = Quaternion.Euler(x, y, z);
+            Assert.That(control.ReadTilt(rest, 1), Is.Zero);
+            float right = control.ReadTilt(rest * Quaternion.AngleAxis(12, Vector3.up), 1);
+            Assert.That(right, Is.InRange(.3f, .4f));
+            Assert.That(control.ReadTilt(rest, 1), Is.Zero);
+            float left = control.ReadTilt(rest * Quaternion.AngleAxis(-12, Vector3.up), 1);
+            Assert.That(left, Is.EqualTo(-right).Within(.0001f));
+        }
+
+        [Test] public void AttitudeTiltIgnoresOtherAxesAndQuaternionSignChanges()
+        {
+            var control = new PulseMotionControl();
+            Quaternion start = Quaternion.Euler(113, -34, 58);
+            control.ReadTilt(start, 1);
+            Quaternion pitched = start * Quaternion.AngleAxis(180, Vector3.right);
+            Assert.That(control.ReadTilt(pitched, 1), Is.Zero);
+            Quaternion rolled = pitched * Quaternion.AngleAxis(50, Vector3.forward);
+            Assert.That(control.ReadTilt(rolled, 1), Is.Zero);
+            Quaternion tilted = rolled * Quaternion.AngleAxis(12, Vector3.up);
+            float right = control.ReadTilt(tilted, 1);
+            Assert.That(right, Is.Positive);
+            var equivalent = new Quaternion(-tilted.x, -tilted.y, -tilted.z, -tilted.w);
+            Assert.That(control.ReadTilt(equivalent, 1), Is.EqualTo(right).Within(.0001f));
+        }
+
+        [TestCase(-1f)] [TestCase(1f)]
+        public void AttitudeTiltRespondsImmediatelyAfterOverTiltingAndCanRecenter(float sign)
+        {
+            var control = new PulseMotionControl();
+            Quaternion rest = Quaternion.Euler(90, 36, 0);
+            control.ReadTilt(rest, 2);
+            Assert.That(control.ReadTilt(rest * Quaternion.AngleAxis(sign * 70, Vector3.up), 2), Is.EqualTo(sign));
+            Quaternion returned = rest * Quaternion.AngleAxis(sign * 69, Vector3.up);
+            float command = control.ReadTilt(returned, 2);
+            Assert.That(Mathf.Abs(command), Is.InRange(.8f, .97f));
+            Assert.That(Mathf.Sign(command), Is.EqualTo(sign));
+            control.Reset();
+            Assert.That(control.ReadTilt(returned, 2), Is.Zero);
+        }
+
         [TestCase(-1f)] [TestCase(1f)]
         public void ReturningFromExcessTiltRespondsOnTheFirstSample(float sign)
         {

@@ -12,7 +12,7 @@ namespace Pulse
         public float Steering { get; private set; }
         public Func<Vector2, bool> CanBeginDrag { private get; set; }
         public Func<bool> CanActivatePulse { private get; set; }
-        public static bool TiltAvailable => GravitySensor.current != null || Accelerometer.current != null;
+        public static bool TiltAvailable => AttitudeSensor.current != null || GravitySensor.current != null || Accelerometer.current != null;
         public static bool TwistAvailable => Gyroscope.current != null;
         public SteeringMode EffectiveMode
         {
@@ -25,6 +25,8 @@ namespace Pulse
         }
         public bool MotionAvailable => EffectiveMode != SteeringMode.Touch;
         readonly PulseMotionControl motionControl = new PulseMotionControl();
+        AttitudeSensor tiltAttitude;
+        double tiltSampleAfter;
         float origin, drag;
         bool dragging, manualPose;
         int touchId = -1;
@@ -40,54 +42,80 @@ namespace Pulse
             TrackedTouch.onFingerDown += BeginTap;
             TrackedTouch.onFingerMove += MoveTap;
             TrackedTouch.onFingerUp += EndTap;
+            InputSystem.onDeviceChange += OnDeviceChange;
             Calibrate();
         }
         public void Calibrate(bool keepManualPose = false)
         {
-            bool motion = PulseSettings.Controls != SteeringMode.Touch;
-            if (GravitySensor.current != null)
+            SteeringMode mode = EffectiveMode;
+            AttitudeSensor attitude = mode == SteeringMode.Tilt ? FindTiltAttitude() : null;
+            bool gravityFallback = mode == SteeringMode.Tilt && attitude == null;
+            ConfigureSensor(GravitySensor.current, gravityFallback);
+            ConfigureSensor(Accelerometer.current, gravityFallback && GravitySensor.current == null);
+            ConfigureSensor(Gyroscope.current, mode == SteeringMode.Twist);
+            bool attitudeChanged = attitude != tiltAttitude;
+            if (attitudeChanged)
             {
-                if (motion)
-                {
-                    InputSystem.EnableDevice(GravitySensor.current);
-                    GravitySensor.current.samplingFrequency = 60;
-                }
-                else InputSystem.DisableDevice(GravitySensor.current);
+                ConfigureSensor(tiltAttitude, false);
+                tiltAttitude = attitude;
+                if (attitude != null) tiltSampleAfter = attitude.lastUpdateTime;
             }
-            if (Accelerometer.current != null)
-            {
-                if (motion && GravitySensor.current == null)
-                {
-                    InputSystem.EnableDevice(Accelerometer.current);
-                    Accelerometer.current.samplingFrequency = 60;
-                }
-                else InputSystem.DisableDevice(Accelerometer.current);
-            }
-            if (Gyroscope.current != null)
-            {
-                if (PulseSettings.Controls == SteeringMode.Twist)
-                {
-                    InputSystem.EnableDevice(Gyroscope.current);
-                    Gyroscope.current.samplingFrequency = 60;
-                }
-                else InputSystem.DisableDevice(Gyroscope.current);
-            }
-            if (keepManualPose) ResumeGesture();
+            ConfigureSensor(tiltAttitude, true);
+            if (keepManualPose && !attitudeChanged) ResumeGesture();
             else ResetGesture();
-            if (motion && MotionAvailable)
-                Debug.Log("[Pulse] Motion input: " + PulseSettings.Controls + ", sensor=" + (GravitySensor.current != null ? "gravity" : "accelerometer/gyro") + ", requested sampling=60Hz");
+            if (MotionAvailable)
+            {
+                string sensor = mode == SteeringMode.Twist ? "gyroscope" : tiltAttitude != null ? "attitude" :
+                    GravitySensor.current != null ? "gravity" : "accelerometer";
+                Debug.Log("[Pulse] Motion input: " + mode + ", sensor=" + sensor + ", requested sampling=60Hz");
+            }
         }
+
+        static AttitudeSensor FindTiltAttitude()
+        {
+#if UNITY_ANDROID
+            // Game rotation avoids magnetic heading corrections during steering.
+            return (AttitudeSensor)InputSystem.GetDevice<UnityEngine.InputSystem.Android.AndroidGameRotationVector>()
+                ?? (AttitudeSensor)InputSystem.GetDevice<UnityEngine.InputSystem.Android.AndroidRotationVector>()
+                ?? AttitudeSensor.current;
+#else
+            return AttitudeSensor.current;
+#endif
+        }
+
+        static void ConfigureSensor(Sensor sensor, bool useSensor)
+        {
+            if (sensor == null || !sensor.added) return;
+            if (useSensor)
+            {
+                InputSystem.EnableDevice(sensor);
+                sensor.samplingFrequency = 60;
+            }
+            else InputSystem.DisableDevice(sensor);
+        }
+
         void OnDisable()
         {
             TrackedTouch.onFingerDown -= BeginTap;
             TrackedTouch.onFingerMove -= MoveTap;
             TrackedTouch.onFingerUp -= EndTap;
+            InputSystem.onDeviceChange -= OnDeviceChange;
             EnhancedTouchSupport.Disable();
             ClearTaps();
-            if (Accelerometer.current != null) InputSystem.DisableDevice(Accelerometer.current);
-            if (GravitySensor.current != null) InputSystem.DisableDevice(GravitySensor.current);
-            if (Gyroscope.current != null) InputSystem.DisableDevice(Gyroscope.current);
+            ConfigureSensor(tiltAttitude, false);
+            tiltAttitude = null;
+            ConfigureSensor(Accelerometer.current, false);
+            ConfigureSensor(GravitySensor.current, false);
+            ConfigureSensor(Gyroscope.current, false);
         }
+
+        void OnDeviceChange(InputDevice device, InputDeviceChange change)
+        {
+            if (device != tiltAttitude || change is not (InputDeviceChange.SoftReset or InputDeviceChange.HardReset)) return;
+            tiltSampleAfter = device.lastUpdateTime;
+            ResetGesture();
+        }
+
         public void ResetGesture()
         {
             ClearTaps();
@@ -108,16 +136,28 @@ namespace Pulse
             ResetGesture();
             if (EffectiveMode == SteeringMode.Tilt)
             {
-                motionControl.ReadTilt(ReadGravity(), PulseSettings.Sensitivity);
+                ReadTilt();
                 manualPose = motionControl.Calibrated;
             }
             else manualPose = EffectiveMode == SteeringMode.Twist;
             return manualPose;
         }
 
-        static Vector3 ReadGravity() => GravitySensor.current != null
-            ? GravitySensor.current.gravity.ReadValue()
-            : Accelerometer.current.acceleration.ReadValue();
+        float ReadTilt()
+        {
+            if (tiltAttitude != null)
+            {
+                // The default value can look like a real pose until a sample arrives.
+                return tiltAttitude.lastUpdateTime > tiltSampleAfter
+                    ? motionControl.ReadTilt(tiltAttitude.attitude.ReadValue(), PulseSettings.Sensitivity)
+                    : 0;
+            }
+
+            Vector3 gravity = GravitySensor.current != null
+                ? GravitySensor.current.gravity.ReadValue()
+                : Accelerometer.current?.acceleration.ReadValue() ?? Vector3.zero;
+            return motionControl.ReadTilt(gravity, PulseSettings.Sensitivity);
+        }
 
         public float Read(float dt)
         {
@@ -128,7 +168,7 @@ namespace Pulse
                     target = motionControl.ReadTwist(Gyroscope.current.angularVelocity.ReadValue().z, dt, PulseSettings.Sensitivity);
                     break;
                 case SteeringMode.Tilt:
-                    target = motionControl.ReadTilt(ReadGravity(), PulseSettings.Sensitivity);
+                    target = ReadTilt();
                     break;
                 default:
                     target = ReadDrag();
