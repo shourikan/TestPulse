@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -12,10 +13,15 @@ namespace Pulse
         Camera uiCamera;
         RectTransform safe, hudHeader;
         GameObject hud, guide, calibrate;
-        CanvasGroup titleGroup, pauseGroup, endGroup, settingsGroup;
+        CanvasGroup titleGroup, pauseGroup, endGroup, settingsGroup, leaderboardGroup;
         TextMeshProUGUI scoreText, hudBest, titleBest;
         TextMeshProUGUI endScore, endRecord, endBest;
         TextMeshProUGUI guideTitle, modeDetail, hapticsValue, motionValue;
+        TextMeshProUGUI leaderboardStatus;
+        UnityEngine.UI.Button leaderboardRefresh;
+        readonly RectTransform[] leaderboardRows = new RectTransform[PulseOnline.LeaderboardSize];
+        readonly TextMeshProUGUI[] leaderboardNames = new TextMeshProUGUI[PulseOnline.LeaderboardSize];
+        readonly TextMeshProUGUI[] leaderboardScores = new TextMeshProUGUI[PulseOnline.LeaderboardSize];
         UnityEngine.UI.Image hapticsTrack, motionTrack;
         RectTransform hapticsThumb, motionThumb;
         readonly UnityEngine.UI.Image[] controlButtons = new UnityEngine.UI.Image[3];
@@ -27,7 +33,9 @@ namespace Pulse
         float flashAlpha;
         long lastScore;
         bool showingSettings;
+        int leaderboardView;
         public bool SettingsOpen => showingSettings;
+        public bool LeaderboardOpen { get; private set; }
 
         public void Initialize(PulseGame owner, Camera camera)
         {
@@ -58,6 +66,7 @@ namespace Pulse
             BuildPause();
             BuildEnd();
             BuildSettings();
+            BuildLeaderboard();
             flash = Fill(transform, "Transition", PulsePalette.Alpha(PulsePalette.Void, 0));
             ShowState();
         }
@@ -83,7 +92,8 @@ namespace Pulse
             titleBest = Label(best, "", .745f, .5f, 51, PulsePalette.Gold, 345, 95, TextAlignmentOptions.Right, true);
             FitNumber(titleBest, 20);
             Button(p, "Play", .5f, .235f, 892, 156, PulsePalette.Mint, game.StartRun, true);
-            Button(p, "Settings", .5f, .139f, 892, 150, PulsePalette.Panel, OpenSettings);
+            Button(p, "Settings", .286f, .139f, 430, 150, PulsePalette.Panel, OpenSettings);
+            Button(p, "Leaderboard", .714f, .139f, 430, 150, PulsePalette.Panel, OpenLeaderboard);
             Legend(p);
         }
 
@@ -149,9 +159,32 @@ namespace Pulse
             FitNumber(endScore, 62);
             endBest = Label(p, "", .5f, .646f, 52, PulsePalette.Gold, 900, 78);
             FitNumber(endBest, 32);
+            Button(p, "Leaderboard", .5f, .306f, 892, 150, PulsePalette.Panel, OpenLeaderboard);
             Button(p, "Retry", .5f, .211f, 892, 156, PulsePalette.Mint, game.StartRun, true);
             Button(p, "Home", .273f, .117f, 402, 150, PulsePalette.Panel, game.Home);
             Button(p, "Settings", .727f, .117f, 402, 150, PulsePalette.Panel, OpenSettings);
+        }
+
+        void BuildLeaderboard()
+        {
+            var p = Panel("Leaderboard", true, out leaderboardGroup).transform;
+            Label(p, "Leaderboard", .5f, .906f, 84, PulsePalette.Ink, 946, 130, bold: true);
+            leaderboardStatus = Label(p, "", .5f, .812f, 34, PulsePalette.Muted, 920, 104);
+            leaderboardStatus.textWrappingMode = TextWrappingModes.Normal;
+            for (int i = 0; i < leaderboardRows.Length; i++)
+            {
+                var row = At(p, $"Rank {i + 1}", .5f, .737f - i * .055f, 892, 77);
+                leaderboardRows[i] = row;
+                Surface(row, PulsePalette.Panel);
+                Label(row, (i + 1).ToString(), .07f, .5f, 34, PulsePalette.Muted, 95, 66, bold: true);
+                leaderboardNames[i] = Label(row, "", .352f, .5f, 38, PulsePalette.Ink, 383, 67, TextAlignmentOptions.Left);
+                leaderboardNames[i].richText = false;
+                leaderboardScores[i] = Label(row, "", .762f, .5f, 42, PulsePalette.Gold, 362, 67, TextAlignmentOptions.Right, true);
+                FitNumber(leaderboardScores[i], 20);
+                row.gameObject.SetActive(false);
+            }
+            Button(p, "Back", .286f, .092f, 430, 150, PulsePalette.Panel, CloseLeaderboard);
+            leaderboardRefresh = Button(p, "Refresh", .714f, .092f, 430, 150, PulsePalette.Mint, RefreshLeaderboard, true);
         }
 
         void BuildSettings()
@@ -311,6 +344,7 @@ namespace Pulse
         {
             if (game.Model.State == RunState.Playing) game.TogglePause();
             showingSettings = true;
+            game.Online.Track("settings_opened");
             RefreshSettings();
             ShowState();
         }
@@ -322,8 +356,64 @@ namespace Pulse
             ShowState();
         }
 
+        void OpenLeaderboard()
+        {
+            LeaderboardOpen = true;
+            ShowState();
+            game.Online.Track("leaderboard_opened");
+            RefreshLeaderboard();
+        }
+
+        public void CloseLeaderboard()
+        {
+            LeaderboardOpen = false;
+            leaderboardView++;
+            ShowState();
+        }
+
+        async void RefreshLeaderboard()
+        {
+            int view = ++leaderboardView;
+            foreach (var row in leaderboardRows) row.gameObject.SetActive(false);
+            if (!game.Online.LeaderboardAvailable)
+            {
+                leaderboardStatus.text = "Online scores are unavailable in this build.";
+                leaderboardRefresh.gameObject.SetActive(false);
+                return;
+            }
+
+            leaderboardRefresh.gameObject.SetActive(true);
+            leaderboardRefresh.interactable = false;
+            leaderboardStatus.text = "Loading scores…";
+            var request = game.Online.GetLeaderboardAsync();
+            var finished = await Task.WhenAny(request, Task.Delay(12000));
+            if (this == null || view != leaderboardView) return;
+            leaderboardRefresh.interactable = true;
+            var entries = finished == request ? await request : null;
+            if (entries == null)
+            {
+                leaderboardStatus.text = "Couldn’t load scores. Try refreshing.";
+                return;
+            }
+
+            if (game.Online.ScorePending)
+                leaderboardStatus.text = "Your score is waiting to sync.";
+            else
+                leaderboardStatus.text = entries.Length == 0 ? "No scores yet. Finish a run to post yours." : "All-time top scores";
+
+            for (int i = 0; i < entries.Length; i++)
+            {
+                var entry = entries[i];
+                leaderboardNames[i].text = entry.IsYou ? "You" : entry.Name;
+                leaderboardNames[i].color = entry.IsYou ? PulsePalette.Mint : PulsePalette.Ink;
+                leaderboardScores[i].text = entry.Score.ToString("N0");
+                leaderboardRows[i].gameObject.SetActive(true);
+            }
+        }
+
         public void ResetRun()
         {
+            if (LeaderboardOpen) CloseLeaderboard();
             showingSettings = false;
             shownScore = 0;
             guide.SetActive(false);
@@ -334,11 +424,13 @@ namespace Pulse
         public void ShowState()
         {
             var state = game.Model.State;
-            SetPanel(titleGroup, !showingSettings && state == RunState.Title);
-            SetPanel(pauseGroup, !showingSettings && state == RunState.Paused);
-            SetPanel(endGroup, !showingSettings && state == RunState.Ended);
+            bool showGame = !showingSettings && !LeaderboardOpen;
+            SetPanel(titleGroup, showGame && state == RunState.Title);
+            SetPanel(pauseGroup, showGame && state == RunState.Paused);
+            SetPanel(endGroup, showGame && state == RunState.Ended);
             SetPanel(settingsGroup, showingSettings);
-            hud.SetActive(!showingSettings && (state == RunState.Playing || state == RunState.Paused));
+            SetPanel(leaderboardGroup, LeaderboardOpen);
+            hud.SetActive(showGame && (state == RunState.Playing || state == RunState.Paused));
             bool hasBest = PulseSettings.Runs > 0 || PulseSettings.Best > 0;
             string best = hasBest ? PulseSettings.Best.ToString("N0") : "—";
             titleBest.text = hudBest.text = best;
@@ -361,6 +453,7 @@ namespace Pulse
             Fade(pauseGroup, dt);
             Fade(endGroup, dt);
             Fade(settingsGroup, dt);
+            Fade(leaderboardGroup, dt);
             flashAlpha = Mathf.MoveTowards(flashAlpha, 0, dt * 2);
             flash.color = PulsePalette.Alpha(PulsePalette.Void, flashAlpha);
         }

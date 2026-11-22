@@ -33,7 +33,9 @@ Never commit a keystore or password. Release signing and store submission are se
 
 `PulseSimulation` holds deterministic rules and swept circle collision checks, independently of scene rendering. The game recycles actors, effects and floating labels. Music streams and short sounds preload. uGUI and TextMeshPro render responsive menus inside the device safe area. Six procedural sprites provide the geometric gameplay art, and the Home screen uses the Fault Line wordmark.
 
-The port corrects frame-dependent timing and incomplete run resets in the old sketch. Touch steering is on by default, with a maximum of three banked shields, a brief grace period after shield damage and automatic pause on interruption. Bluetooth versus is deferred by agreement. No backend, ads, purchases, or account service is wired.
+The port corrects frame-dependent timing and incomplete run resets in the old sketch. Touch steering is on by default, with a maximum of three banked shields, a brief grace period after shield damage and automatic pause on interruption. Bluetooth versus is deferred by agreement.
+
+Home and Game Over link to the all-time leaderboard. Firebase Authentication gives each installation a guest account, Cloud Firestore stores its highest completed-run score, and Google Analytics for Firebase measures gameplay time and key interactions on Android. See [Firebase setup](Unity/Pulse/Docs/FIREBASE.md) for SDK installation, project configuration, and event names.
 
 Run the **Pulse.Tests** EditMode assembly in Unity Test Runner for timing, scoring, shield damage, pulse expiry, pause/resume, restart, seeding and speed-cycle coverage. The scene-generation helper `Unity/Pulse/AgentScripts/CreatePulse.cs` is versioned for reproducibility and can be run through the Unity Pipeline CLI; it rebuilds the dedicated Pulse scene and generated art, so do not use it to replace manual scene edits unintentionally.
 

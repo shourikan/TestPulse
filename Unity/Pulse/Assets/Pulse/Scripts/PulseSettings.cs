@@ -9,6 +9,7 @@ namespace Pulse
     {
         const string Prefix = "pulse.v1.";
         public static long Best { get; private set; }
+        public static long LeaderboardBest { get; private set; }
         public static int Runs { get; private set; }
         public static float Music = .55f, Sfx = .75f, Sensitivity = 1;
         public static bool Haptics = true, ReducedMotion;
@@ -19,6 +20,8 @@ namespace Pulse
             long.TryParse(PlayerPrefs.GetString(Prefix + "best64"), NumberStyles.None,
                 CultureInfo.InvariantCulture, out long savedBest);
             Best = Math.Max(savedBest, Mathf.Max(0, PlayerPrefs.GetInt(Prefix + "best")));
+            LeaderboardBest = long.TryParse(PlayerPrefs.GetString(Prefix + "leaderboardBest"), NumberStyles.None,
+                CultureInfo.InvariantCulture, out long onlineBest) ? onlineBest : -1;
             Runs = Mathf.Max(0, PlayerPrefs.GetInt(Prefix + "runs"));
             Music = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "music", .55f));
             Sfx = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "sfx", .75f));
@@ -42,12 +45,15 @@ namespace Pulse
         {
             bool record = score > Best;
             Best = Math.Max(Best, score); Runs++;
+            LeaderboardBest = Math.Max(LeaderboardBest, score);
             Save();
             return record;
         }
         public static void Save()
         {
             PlayerPrefs.SetString(Prefix + "best64", Best.ToString(CultureInfo.InvariantCulture));
+            if (LeaderboardBest >= 0)
+                PlayerPrefs.SetString(Prefix + "leaderboardBest", LeaderboardBest.ToString(CultureInfo.InvariantCulture));
             PlayerPrefs.SetInt(Prefix + "runs", Runs);
             PlayerPrefs.SetFloat(Prefix + "music", Music); PlayerPrefs.SetFloat(Prefix + "sfx", Sfx);
             PlayerPrefs.SetFloat(Prefix + "sensitivity", Sensitivity);

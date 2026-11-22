@@ -2,5 +2,10 @@
   "name": "Pulse.Runtime",
   "rootNamespace": "Pulse",
   "references": ["Unity.InputSystem", "UnityEngine.UI", "Unity.TextMeshPro"],
+  "versionDefines": [
+    { "name": "com.google.firebase.auth", "expression": "", "define": "PULSE_FIREBASE_AUTH" },
+    { "name": "com.google.firebase.firestore", "expression": "", "define": "PULSE_FIREBASE_FIRESTORE" },
+    { "name": "com.google.firebase.analytics", "expression": "", "define": "PULSE_FIREBASE_ANALYTICS" }
+  ],
   "autoReferenced": true
 }
