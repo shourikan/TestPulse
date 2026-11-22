@@ -155,10 +155,11 @@ namespace Pulse
             if (kind == FeedbackKind.Death)
             {
                 Input.ResetGesture();
+                bool newLeaderboardBest = value > PulseSettings.LeaderboardBest;
                 NewRecord = PulseSettings.SaveRun(value);
                 Online.RunCompleted(value, Model.Elapsed, NewRecord);
                 Screen.sleepTimeout = SleepTimeout.SystemSetting;
-                UI.ShowState(); RefreshAudio();
+                UI.ShowResults(value, newLeaderboardBest); RefreshAudio();
                 Debug.Log("[Pulse] Run ended. score=" + value + " best=" + PulseSettings.Best);
             }
             if (kind == FeedbackKind.Pulse) Online.Track("pulse_activated");

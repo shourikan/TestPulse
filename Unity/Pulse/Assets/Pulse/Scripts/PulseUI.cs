@@ -9,13 +9,20 @@ namespace Pulse
 {
     public sealed class PulseUI : MonoBehaviour
     {
+        const int LeaderboardTimeoutMs = 12000;
+        const float FirstPlaceDuration = .8f;
+        const int ConfettiPerSide = 5;
+
         PulseGame game;
         Camera uiCamera;
         RectTransform safe, hudHeader;
         GameObject hud, guide, calibrate;
         CanvasGroup titleGroup, pauseGroup, endGroup, settingsGroup, leaderboardGroup;
         TextMeshProUGUI scoreText, hudBest, titleBest;
-        TextMeshProUGUI endScore, endRecord, endBest;
+        TextMeshProUGUI endScore, endRecord, endBest, endRank;
+        RectTransform rankBadge;
+        CanvasGroup rankConfetti;
+        readonly RectTransform[] confettiPieces = new RectTransform[ConfettiPerSide * 2];
         TextMeshProUGUI guideTitle, modeDetail, hapticsValue, motionValue;
         TextMeshProUGUI leaderboardStatus;
         UnityEngine.UI.Button leaderboardRefresh;
@@ -33,7 +40,8 @@ namespace Pulse
         float flashAlpha;
         long lastScore;
         bool showingSettings;
-        int leaderboardView;
+        int leaderboardView, runRankRequest;
+        float firstPlaceTime = FirstPlaceDuration;
         public bool SettingsOpen => showingSettings;
         public bool LeaderboardOpen { get; private set; }
 
@@ -159,10 +167,29 @@ namespace Pulse
             FitNumber(endScore, 62);
             endBest = Label(p, "", .5f, .646f, 52, PulsePalette.Gold, 900, 78);
             FitNumber(endBest, 32);
+            BuildRunRank(p);
             Button(p, "Leaderboard", .5f, .306f, 892, 150, PulsePalette.Panel, OpenLeaderboard);
             Button(p, "Retry", .5f, .211f, 892, 156, PulsePalette.Mint, game.StartRun, true);
             Button(p, "Home", .273f, .117f, 402, 150, PulsePalette.Panel, game.Home);
             Button(p, "Settings", .727f, .117f, 402, 150, PulsePalette.Panel, OpenSettings);
+        }
+
+        void BuildRunRank(Transform parent)
+        {
+            var burst = At(parent, "First place confetti", .5f, .515f, 0, 0);
+            rankConfetti = burst.gameObject.AddComponent<CanvasGroup>();
+            rankConfetti.gameObject.SetActive(false);
+            for (int i = 0; i < confettiPieces.Length; i++)
+            {
+                var piece = At(burst, "Confetti", .5f, .5f, 16, 16);
+                Icon(piece, diamond, i % 2 == 0 ? PulsePalette.Gold : PulsePalette.Mint);
+                confettiPieces[i] = piece;
+            }
+
+            rankBadge = At(parent, "Run rank", .5f, .515f, 624, 88);
+            Surface(rankBadge, PulsePalette.Panel);
+            endRank = Label(rankBadge, "", .5f, .5f, 42, PulsePalette.Muted, 584, 70, bold: true);
+            FitNumber(endRank, 28);
         }
 
         void BuildLeaderboard()
@@ -386,7 +413,7 @@ namespace Pulse
             leaderboardRefresh.interactable = false;
             leaderboardStatus.text = "Loading scores…";
             var request = game.Online.GetLeaderboardAsync();
-            var finished = await Task.WhenAny(request, Task.Delay(12000));
+            var finished = await Task.WhenAny(request, Task.Delay(LeaderboardTimeoutMs));
             if (this == null || view != leaderboardView) return;
             leaderboardRefresh.interactable = true;
             var entries = finished == request ? await request : null;
@@ -413,12 +440,69 @@ namespace Pulse
 
         public void ResetRun()
         {
+            runRankRequest++;
             if (LeaderboardOpen) CloseLeaderboard();
             showingSettings = false;
             shownScore = 0;
             guide.SetActive(false);
             lastScore = -1;
             ShowState();
+        }
+
+        public async void ShowResults(long score, bool newLeaderboardBest)
+        {
+            int run = ++runRankRequest;
+            firstPlaceTime = FirstPlaceDuration;
+            rankBadge.localScale = Vector3.one;
+            rankConfetti.gameObject.SetActive(false);
+            SetRunRank("Leaderboard unavailable", PulsePalette.Muted);
+            ShowState();
+            if (!game.Online.LeaderboardAvailable || Application.internetReachability == NetworkReachability.NotReachable)
+                return;
+
+            SetRunRank("Checking run rank…", PulsePalette.Muted);
+            // A leaderboard read already in flight may predate this score submission.
+            var request = game.Online.GetLeaderboardAsync(fresh: true);
+            var finished = await Task.WhenAny(request, Task.Delay(LeaderboardTimeoutMs));
+            if (this == null || run != runRankRequest || game.Model.State != RunState.Ended) return;
+
+            var entries = finished == request ? await request : null;
+            if (entries == null || (newLeaderboardBest && game.Online.ScorePending))
+            {
+                SetRunRank("Leaderboard unavailable", PulsePalette.Muted);
+                return;
+            }
+
+            ShowRunRank(entries, score, newLeaderboardBest);
+        }
+
+        void ShowRunRank(PulseLeaderboardEntry[] entries, long score, bool newLeaderboardBest)
+        {
+            int projectedRank = 1;
+            for (int i = 0; i < entries.Length; i++)
+            {
+                var entry = entries[i];
+                if (entry.IsYou && entry.Score == score)
+                {
+                    bool firstPlace = i == 0;
+                    SetRunRank($"Leaderboard #{i + 1}", firstPlace ? PulsePalette.Gold : PulsePalette.Mint);
+                    if (firstPlace && newLeaderboardBest && !PulseSettings.ReducedMotion)
+                        firstPlaceTime = 0;
+                    return;
+                }
+                if (entry.Score >= score) projectedRank++;
+            }
+
+            // A run that isn't posted is compared to the board, after any published ties.
+            SetRunRank(projectedRank <= PulseOnline.LeaderboardSize
+                ? $"Run would rank #{projectedRank}"
+                : $"Outside the top {PulseOnline.LeaderboardSize}", PulsePalette.Muted);
+        }
+
+        void SetRunRank(string text, Color color)
+        {
+            endRank.text = text;
+            endRank.color = color;
         }
 
         public void ShowState()
@@ -454,8 +538,29 @@ namespace Pulse
             Fade(endGroup, dt);
             Fade(settingsGroup, dt);
             Fade(leaderboardGroup, dt);
+            RenderFirstPlace(dt);
             flashAlpha = Mathf.MoveTowards(flashAlpha, 0, dt * 2);
             flash.color = PulsePalette.Alpha(PulsePalette.Void, flashAlpha);
+        }
+
+        void RenderFirstPlace(float dt)
+        {
+            if (firstPlaceTime >= FirstPlaceDuration || !endGroup.gameObject.activeSelf) return;
+            firstPlaceTime = PulseSettings.ReducedMotion ? FirstPlaceDuration : Mathf.Min(firstPlaceTime + dt, FirstPlaceDuration);
+            float progress = firstPlaceTime / FirstPlaceDuration;
+            float spread = 1 - (1 - progress) * (1 - progress);
+            rankBadge.localScale = Vector3.one * (1 + .12f * Mathf.Sin(Mathf.PI * spread));
+            rankConfetti.gameObject.SetActive(progress < 1);
+            rankConfetti.alpha = 1 - progress;
+            for (int i = 0; i < confettiPieces.Length; i++)
+            {
+                float side = i < ConfettiPerSide ? -1 : 1;
+                float fan = i % ConfettiPerSide - (ConfettiPerSide - 1) * .5f;
+                var piece = confettiPieces[i];
+                piece.anchoredPosition = new Vector2(side * (280 + (126 - 14 * Mathf.Abs(fan)) * spread),
+                    fan * (12 + 28 * spread) - 42 * progress * progress);
+                piece.localRotation = Quaternion.Euler(0, 0, side * (fan * 18 + 180 * progress));
+            }
         }
 
         void RenderHud(PulseSimulation model, float dt)

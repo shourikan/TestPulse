@@ -111,10 +111,10 @@ namespace Pulse
 #endif
         }
 
-        public Task<PulseLeaderboardEntry[]> GetLeaderboardAsync()
+        public Task<PulseLeaderboardEntry[]> GetLeaderboardAsync(bool fresh = false)
         {
 #if PULSE_LEADERBOARD
-            if (leaderboardRequest == null || leaderboardRequest.IsCompleted)
+            if (fresh || leaderboardRequest == null || leaderboardRequest.IsCompleted)
                 leaderboardRequest = FetchLeaderboardAsync();
             return leaderboardRequest;
 #else
