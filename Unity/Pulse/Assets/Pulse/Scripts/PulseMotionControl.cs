@@ -9,31 +9,48 @@ namespace Pulse
     {
         public const float TiltRangeDegrees = 30;
         public bool Calibrated { get; private set; }
+        public float TwistDegrees { get; private set; }
         float neutralDegrees, command;
         Quaternion previousAttitude;
 
-        public void Reset() { Calibrated = false; neutralDegrees = command = 0; }
+        public void Reset() { Calibrated = false; neutralDegrees = command = TwistDegrees = 0; }
 
         public float ReadTilt(Quaternion attitude, float sensitivity)
         {
-            if (Quaternion.Dot(attitude, attitude) < .01f) return Shape(command);
+            Quaternion delta = ReadAttitudeDelta(attitude);
+            command = Mathf.Clamp(command + RotationDegrees(delta.y, delta.w) / InputRange(sensitivity), -1, 1);
+            return Shape(command);
+        }
+
+        public float ReadTwist(Quaternion attitude, float sensitivity)
+        {
+            Quaternion delta = ReadAttitudeDelta(attitude);
+            return AddTwist(-RotationDegrees(delta.z, delta.w), sensitivity);
+        }
+
+        Quaternion ReadAttitudeDelta(Quaternion attitude)
+        {
+            if (Quaternion.Dot(attitude, attitude) < .01f) return Quaternion.identity;
             if (!Calibrated)
             {
                 previousAttitude = attitude;
                 Calibrated = true;
-                return 0;
+                return Quaternion.identity;
             }
 
-            if (previousAttitude.Equals(attitude)) return Shape(command);
+            if (previousAttitude.Equals(attitude)) return Quaternion.identity;
 
-            // Measure rotation in the phone's frame. Its local Y axis runs up
-            // the screen, even when the phone is upright or faces down.
-            Quaternion rotation = Quaternion.Inverse(previousAttitude) * attitude;
+            // Measure the change in the phone's local frame.
+            Quaternion delta = Quaternion.Inverse(previousAttitude) * attitude;
             previousAttitude = attitude;
+            return delta;
+        }
+
+        static float RotationDegrees(float axisComponent, float scalar)
+        {
             // A half turn around a perpendicular axis has no measurable twist.
-            if (rotation.y * rotation.y + rotation.w * rotation.w < .000001f) return Shape(command);
-            float degrees = Mathf.DeltaAngle(0, 2 * Mathf.Atan2(rotation.y, rotation.w) * Mathf.Rad2Deg);
-            return AddRotation(degrees, sensitivity);
+            if (axisComponent * axisComponent + scalar * scalar < .000001f) return 0;
+            return Mathf.DeltaAngle(0, 2 * Mathf.Atan2(axisComponent, scalar) * Mathf.Rad2Deg);
         }
 
         public float ReadTilt(Vector3 gravity, float sensitivity)
@@ -49,14 +66,16 @@ namespace Pulse
         }
 
         public float ReadTwist(float radiansPerSecond, float dt, float sensitivity) =>
-            AddRotation(-radiansPerSecond * Mathf.Rad2Deg * Mathf.Clamp(dt, 0, .1f), sensitivity);
+            AddTwist(-radiansPerSecond * Mathf.Rad2Deg * Mathf.Clamp(dt, 0, .1f), sensitivity);
 
         static float InputRange(float sensitivity) => TiltRangeDegrees / Mathf.Clamp(sensitivity, .5f, 2);
 
-        float AddRotation(float degrees, float sensitivity)
+        float AddTwist(float degrees, float sensitivity)
         {
-            command = Mathf.Clamp(command + degrees / InputRange(sensitivity), -1, 1);
-            return Shape(command);
+            float range = InputRange(sensitivity);
+            // The view uses physical degrees while the simulation uses shaped steering.
+            TwistDegrees = Mathf.Clamp(TwistDegrees + degrees, -range, range);
+            return Shape(TwistDegrees / range);
         }
 
         static float Shape(float value)

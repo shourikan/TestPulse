@@ -15,6 +15,8 @@ namespace Pulse
         Camera mainCamera;
         int lastWidth, lastHeight;
         float hapticTime;
+        float worldRoll;
+        bool twistView;
 
         void Awake()
         {
@@ -39,9 +41,28 @@ namespace Pulse
         {
             if (mainCamera == null) return;
             mainCamera.orthographicSize = 5.4f / Mathf.Max(.3f, mainCamera.aspect);
-            Model.HalfHeight = mainCamera.orthographicSize;
+            FitPlayfield();
             lastWidth = Screen.width; lastHeight = Screen.height;
         }
+
+        void SetTwistView(bool enabled)
+        {
+            twistView = enabled;
+            worldRoll = 0;
+            FitPlayfield();
+        }
+
+        void FitPlayfield()
+        {
+            if (mainCamera == null) return;
+            float halfHeight = mainCamera.orthographicSize;
+            float halfWidth = halfHeight * mainCamera.aspect;
+            // A rotated corner can reach beyond either edge of the upright view.
+            float radius = new Vector2(halfWidth, halfHeight).magnitude;
+            Model.HalfHeight = twistView ? radius : halfHeight;
+            Model.HalfWidth = twistView ? radius : halfWidth;
+        }
+
         void Update()
         {
             if (Screen.width != lastWidth || Screen.height != lastHeight) FitCamera();
@@ -66,18 +87,21 @@ namespace Pulse
             if (Model.State == RunState.Playing)
             {
                 if (Input.TakePulseGesture()) ActivatePulse();
-                Model.Step(dt, Input.Read(dt));
+                float steering = Input.Read(dt);
+                worldRoll = twistView ? Input.TwistDegrees : 0;
+                Model.Step(dt, steering);
                 if (Model.State == RunState.Playing) Online.RecordPlayTime(Model.Elapsed);
             }
             else if (Model.State == RunState.Ended && !UI.SettingsOpen && !PulseSettings.ReducedMotion)
                 Model.DriftAfterDeath(dt);
-            World.Render(Model, dt, UI.SettingsOpen); UI.Render(dt);
+            World.Render(Model, dt, UI.SettingsOpen, worldRoll, twistView); UI.Render(dt);
         }
         public void StartRun()
         {
             AbandonRun();
             NewRecord = false;
             Input.Calibrate(keepManualPose: true); World.ResetRun();
+            SetTwistView(Input.EffectiveMode == SteeringMode.Twist);
             bool gentleOpening = !PulseSettings.HasLearned(Input.EffectiveMode);
             Model.Start(System.Environment.TickCount, PulseSettings.Best, gentleOpening);
             Online.RunStarted(Input.EffectiveMode);
@@ -92,7 +116,11 @@ namespace Pulse
             else return;
             Time.timeScale = Model.State == RunState.Paused ? 0 : 1;
             Screen.sleepTimeout = Model.State == RunState.Playing ? SleepTimeout.NeverSleep : SleepTimeout.SystemSetting;
-            if (Model.State == RunState.Playing) Input.ResumeGesture();
+            if (Model.State == RunState.Playing)
+            {
+                Input.ResumeGesture();
+                SetTwistView(Input.EffectiveMode == SteeringMode.Twist);
+            }
             else
             {
                 Online.RecordPlayTime(Model.Elapsed, flush: true);
@@ -106,6 +134,7 @@ namespace Pulse
         {
             AbandonRun();
             Model.Home(); Time.timeScale = 1; Input.ResetGesture();
+            SetTwistView(false);
             World.ResetRun();
             Screen.sleepTimeout = SleepTimeout.SystemSetting;
             UI.ShowState(); RefreshAudio();

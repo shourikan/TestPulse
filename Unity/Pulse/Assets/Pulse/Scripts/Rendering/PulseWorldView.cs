@@ -135,13 +135,15 @@ namespace Pulse
             wake.Reset(); previousFieldOffset = deathWakeOffset = Vector2.zero;
         }
 
-        public void Render(PulseSimulation model, float dt, bool settingsOpen = false)
+        public void Render(PulseSimulation model, float dt, bool settingsOpen = false, float rollDegrees = 0, bool twistView = false)
         {
             bool playing = model.State == RunState.Playing;
             bool paused = model.State == RunState.Paused;
             bool title = model.State == RunState.Title;
             bool ended = model.State == RunState.Ended;
             bool reducedMotion = PulseSettings.ReducedMotion;
+            // Counter the phone's rotation around the player. UI stays in screen space.
+            transform.localRotation = Quaternion.AngleAxis(rollDegrees, Vector3.forward);
             field.gameObject.SetActive(!settingsOpen);
             float visualDt = paused || settingsOpen ? 0 : ended && !reducedMotion ? Mathf.Min(dt, .05f) * .45f : dt;
             clock += visualDt;
@@ -149,7 +151,8 @@ namespace Pulse
             pop = Mathf.MoveTowards(pop, 0, visualDt * 5);
             shake = Mathf.MoveTowards(shake, 0, visualDt * 5);
             field.localPosition = reducedMotion ? Vector3.zero : new Vector3(Mathf.Sin(clock * 93), Mathf.Cos(clock * 73)) * shake * .06f;
-            Vector2 starArea = new Vector2(11.2f, model.HalfHeight * 2 + .4f);
+            float starWidth = twistView ? model.HalfWidth * 2 + .4f : 11.2f;
+            Vector2 starArea = new Vector2(starWidth, model.HalfHeight * 2 + .4f);
             Vector2 starFlow = playing ? model.ScrollDirection * (model.Speed * .14f) : new Vector2(.08f, -.48f);
             for (int i = 0; i < stars.Length; i++)
             {

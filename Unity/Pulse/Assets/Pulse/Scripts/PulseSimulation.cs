@@ -40,6 +40,8 @@ namespace Pulse
         public int Collected { get; private set; }
         public bool Slowing { get; private set; }
         public float HalfHeight = 9.6f;
+        public float HalfWidth = 5.4f;
+        float FieldHalfWidth => Mathf.Max(16.2f, HalfWidth + 1);
         public float Steering { get; private set; }
         public Vector2 FieldOffset { get; private set; }
         public Vector2 ScrollDirection
@@ -205,9 +207,10 @@ namespace Pulse
         void WrapField(PulseActor actor)
         {
             if (actor.Position.y < -HalfHeight - 1) Respawn(actor, false);
-            // Three-screen field, matching the original, wrapped horizontally for endless travel.
-            if (actor.Position.x < -16.2f) actor.Position.x += 32.4f;
-            if (actor.Position.x > 16.2f) actor.Position.x -= 32.4f;
+            // Keep the wrap outside the view, including the corners when it rotates.
+            float limit = FieldHalfWidth;
+            if (actor.Position.x < -limit) actor.Position.x += 2 * limit;
+            if (actor.Position.x > limit) actor.Position.x -= 2 * limit;
         }
 
         public void End() => EndAt(Vector2.zero);
@@ -223,7 +226,8 @@ namespace Pulse
         {
             float initialDistance = gentleOpening && actor.Kind == ActorKind.Hazard ? 9.6f : 3.4f;
             float minY = initial ? initialDistance : HalfHeight + .8f;
-            actor.Position = new Vector2(Range(-16.2f, 16.2f), Range(minY, HalfHeight * 2 + 2));
+            float limit = FieldHalfWidth;
+            actor.Position = new Vector2(Range(-limit, limit), Range(minY, HalfHeight * 2 + 2));
         }
         float Range(float min, float max) => min + (float)random.NextDouble() * (max - min);
         static float SegmentDistanceSquared(Vector2 a, Vector2 b)

@@ -114,6 +114,44 @@ namespace Pulse.Tests
         }
 
         [TestCase(-1f)] [TestCase(1f)]
+        public void TwistCounterRotationMatchesPhoneAngleAtEverySensitivity(float sign)
+        {
+            Quaternion rest = Quaternion.Euler(103, 75, -42);
+            foreach (float sensitivity in new[] { .5f, 1f, 2f })
+            {
+                var control = new PulseMotionControl();
+                control.ReadTwist(rest, sensitivity);
+                Quaternion turned = rest * Quaternion.AngleAxis(-sign * 12, Vector3.forward);
+                control.ReadTwist(turned, sensitivity);
+                Assert.That(control.TwistDegrees, Is.EqualTo(sign * 12).Within(.001f));
+                control.ReadTwist(turned * Quaternion.AngleAxis(24, Vector3.right), sensitivity);
+                Assert.That(control.TwistDegrees, Is.EqualTo(sign * 12).Within(.001f));
+            }
+        }
+
+        [TestCase(.5f, 60f)] [TestCase(1f, 30f)] [TestCase(2f, 15f)]
+        public void TwistCounterRotationStopsAtFullSteeringAndReleasesImmediately(float sensitivity, float limit)
+        {
+            var control = new PulseMotionControl();
+            control.ReadTwist(Quaternion.identity, sensitivity);
+            Quaternion turned = Quaternion.AngleAxis(-75, Vector3.forward);
+            Assert.That(control.ReadTwist(turned, sensitivity), Is.EqualTo(1).Within(.001f));
+            Assert.That(control.TwistDegrees, Is.EqualTo(limit).Within(.001f));
+            control.ReadTwist(Quaternion.AngleAxis(-74, Vector3.forward), sensitivity);
+            Assert.That(control.TwistDegrees, Is.EqualTo(limit - 1).Within(.001f));
+            control.Reset();
+            control.ReadTwist(turned, sensitivity);
+            Assert.That(control.TwistDegrees, Is.Zero);
+        }
+
+        [Test] public void GyroscopeTwistAlsoReportsPhysicalDegrees()
+        {
+            var control = new PulseMotionControl();
+            control.ReadTwist(-100 * Mathf.Deg2Rad, .1f, 2);
+            Assert.That(control.TwistDegrees, Is.EqualTo(10).Within(.001f));
+        }
+
+        [TestCase(-1f)] [TestCase(1f)]
         public void TwistDiscardsExcessRotationAtTheLimit(float sign)
         {
             var control = new PulseMotionControl();
