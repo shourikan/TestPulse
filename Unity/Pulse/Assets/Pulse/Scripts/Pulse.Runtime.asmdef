@@ -1,0 +1,6 @@
+{
+  "name": "Pulse.Runtime",
+  "rootNamespace": "Pulse",
+  "references": ["Unity.InputSystem", "UnityEngine.UI", "Unity.TextMeshPro"],
+  "autoReferenced": true
+}

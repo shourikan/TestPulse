@@ -1,0 +1,21 @@
+# Unity port (the Processing original remains at the repository root)
+Unity/**/[Ll]ibrary/
+Unity/**/[Tt]emp/
+Unity/**/.utmp/
+Unity/**/[Oo]bj/
+Unity/**/[Ll]ogs/
+Unity/**/[Uu]ser[Ss]ettings/
+Unity/**/[Bb]uilds/
+Unity/**/[Bb]uild/
+Unity/**/MemoryCaptures/
+Unity/**/Assets/Captures/
+Unity/**/Screenshots/
+Unity/Pulse/Docs/AndroidBuildReport.json
+Unity/**/*.csproj
+Unity/**/*.sln
+Unity/**/*.slnx
+Unity/**/.vs/
+Unity/**/.idea/
+Unity/**/.git/
+Unity/**/*.keystore
+Unity/**/*.jks

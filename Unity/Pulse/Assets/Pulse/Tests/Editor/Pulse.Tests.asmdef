@@ -1,0 +1,6 @@
+{
+  "name": "Pulse.Tests",
+  "references": ["Pulse.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

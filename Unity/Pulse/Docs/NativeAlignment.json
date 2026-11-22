@@ -1,0 +1,37 @@
+[
+  {
+    "library": "lib_burst_generated.so",
+    "minimumLoadAlignment": 16384.0,
+    "passed": true
+  },
+  {
+    "library": "libc++_shared.so",
+    "minimumLoadAlignment": 16384.0,
+    "passed": true
+  },
+  {
+    "library": "libgame.so",
+    "minimumLoadAlignment": 16384.0,
+    "passed": true
+  },
+  {
+    "library": "libil2cpp.so",
+    "minimumLoadAlignment": 16384.0,
+    "passed": true
+  },
+  {
+    "library": "libmain.so",
+    "minimumLoadAlignment": 16384.0,
+    "passed": true
+  },
+  {
+    "library": "libswappywrapper.so",
+    "minimumLoadAlignment": 16384.0,
+    "passed": true
+  },
+  {
+    "library": "libunity.so",
+    "minimumLoadAlignment": 16384.0,
+    "passed": true
+  }
+]
